@@ -80,6 +80,10 @@ const SUPABASE_URL = 'https://sxbktkwecynpyfzysakk.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Iy8JZRf85b3AtIzQqVczUA_M3Nc6QZM';
 // ===============================================================
 
+function showErr(m){document.getElementById('app').innerHTML='<div style="padding:16px;font-family:sans-serif"><h3 style="color:#d93025">Error</h3><pre style="white-space:pre-wrap;word-break:break-word">'+String(m).replace(/</g,'&lt;')+'</pre></div>';}
+window.addEventListener('error',e=>showErr(e.message));
+window.addEventListener('unhandledrejection',e=>showErr(e.reason&&e.reason.message||e.reason));
+if(typeof supabase==='undefined'||typeof qrcode==='undefined'){showErr('Internet library did not load (supabase/qrcode). Check internet or try again.');throw new Error('lib');}
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const app = document.getElementById('app');
 const $ = s => document.querySelector(s);
@@ -126,7 +130,8 @@ async function start() {
   const q = new URLSearchParams(location.search).get('shop');
   const id = m ? m[1] : q;
   if (id) return publicPage(Number(id));
-  const { data: { session } } = await sb.auth.getSession();
+  let session = null;
+  try { session = (await sb.auth.getSession()).data.session; } catch (e) { Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k)); }
   if (!session) return loginPage();
   const { data: ok } = await sb.rpc('is_admin');
   if (!ok) { await sb.auth.signOut(); return loginPage('This account is not admin.'); }
@@ -233,4 +238,45 @@ async function adminPage() {
   $('#n10').onclick = async () => {
     if (!confirm('10 खाली कार्ड बनाएँ?')) return;
     const { error } = await sb.from('cards').insert(Array.from({ length: 10 }, () => ({ shop_name: '' })));
-    if (error) return 
+    if (error) return msg('#am', 'Could not create cards.', 'err');
+    adminPage();
+  };
+}
+async function adminCard(id) {
+  const [{ data: s }, { data: logs }] = await Promise.all([
+    sb.from('cards').select('*').eq('id', id).single(),
+    sb.from('change_log').select('*').eq('card_id', id).order('created_at', { ascending: false }).limit(60)]);
+  const link = pubLink(id);
+  const f = FIELDS.map(([k, l, t]) => `<label>${l}</label>` + (t === 'area' ? `<textarea id="f_${k}">${esc(s[k])}</textarea>` : `<input id="f_${k}" value="${esc(s[k])}">`)).join('');
+  const lg = (logs || []).map(l => `<div class="log"><b>${esc(l.field)}</b> · ${new Date(l.created_at).toLocaleString()}<br>${esc(l.old_value) || '—'} → ${esc(l.new_value) || '—'}</div>`).join('') || '<div class="mut">No changes yet.</div>';
+  shell(`<button class="ghost" id="bk">← All cards</button>
+    <div class="card"><h2>Card #${s.id}</h2>${f}
+    <button class="full" id="save">Save changes</button><div id="em"></div>
+    <div class="row"><button id="tp" class="${s.published ? 'ghost' : ''}">${s.published ? 'Hide (unpublish)' : 'Make public'}</button><button class="red" id="dl">Delete</button></div></div>
+    <div class="card"><h3>Public link (NFC chip / QR)</h3><input id="pl" readonly value="${esc(link)}">
+    <div class="row"><button class="ghost" id="cp">Copy link</button><a class="btn ghost" href="${esc(link)}" target="_blank">Open page</a></div>
+    <div class="qrbox">${qrSvg(link)}</div>
+    <button class="full" id="qd">Download QR image</button></div>
+    <div class="card"><h3>Change history</h3>${lg}</div>`, '<button class="ghost" onclick="logout()">Logout</button>');
+  $('#bk').onclick = adminPage;
+  $('#cp').onclick = () => { $('#pl').select(); navigator.clipboard && navigator.clipboard.writeText(link); msg('#em', 'Link copied.', 'ok'); };
+  $('#qd').onclick = () => qrDownload(link, 'card-' + id + '-qr.png');
+  $('#save').onclick = async () => {
+    const upd = {}; FIELDS.forEach(([k]) => upd[k] = $('#f_' + k).value.trim());
+    const { error } = await sb.from('cards').update(upd).eq('id', id);
+    if (error) return msg('#em', 'Could not save.', 'err');
+    msg('#em', 'Saved.', 'ok'); setTimeout(() => adminCard(id), 700);
+  };
+  $('#tp').onclick = async () => { await sb.from('cards').update({ published: !s.published }).eq('id', id); adminCard(id); };
+  $('#dl').onclick = async () => {
+    if (!confirm('Delete this card permanently?')) return;
+    const { error } = await sb.from('cards').delete().eq('id', id);
+    if (error) return msg('#em', 'Delete failed.', 'err');
+    adminPage();
+  };
+}
+
+start();
+</script>
+</body>
+</html>

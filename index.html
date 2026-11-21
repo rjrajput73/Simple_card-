@@ -90,7 +90,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl = u => { u = (u || '').trim(); return /^https?:\/\//i.test(u) ? u : ''; };
 const waUrl = u => { u = (u || '').trim(); if (/^\+?\d[\d\s-]{7,}$/.test(u)) return 'https://wa.me/' + u.replace(/\D/g, ''); return safeUrl(u); };
-const FIELDS = [['shop_name','Shop name','text'],['category','Category (e.g. Medical)','text'],['description','Short description','area'],['address','Address','area'],['phone','Contact number','text'],['whatsapp','WhatsApp chat link','text'],['instagram','Instagram link','text'],['facebook','Facebook link','text'],['google_review','Google Review link','text']];
+const FIELDS = [['shop_name','Shop name','text'],['category','Category (e.g. Medical)','text'],['description','Short description','area'],['address','Address','area'],['phone','Contact number','text'],['whatsapp','WhatsApp chat link','text'],['instagram','Instagram link','text'],['facebook','Facebook link','text'],['google_review','Google Review link','text'],['youtube','YouTube link (optional)','text'],['website','Website link (optional)','text']];
 const pubLink = id => location.origin + location.pathname.replace(/\/shop\/\d+\/?$/, '/') + '?shop=' + id;
 
 const IC = {
@@ -100,6 +100,8 @@ const IC = {
   ph: '<svg class="ic" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" fill="#1faa3c"/><g transform="translate(12 12)"><path fill="#fff" d="M20 15.5c-1.25 0-2.45-.2-3.57-.57a1 1 0 0 0-1.02.24l-2.2 2.2a15.05 15.05 0 0 1-6.59-6.59l2.2-2.21a1 1 0 0 0 .25-1A11.4 11.4 0 0 1 8.5 4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1 17 17 0 0 0 17 17 1 1 0 0 0 1-1v-3.5a1 1 0 0 0-1-1z"/></g></svg>',
   g: '<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="23" fill="#fff"/><g transform="translate(9 9) scale(.62)"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.3-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.3-.4-3.9z"/></g></svg>',
   map: '<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 4C16.5 4 10.5 9.8 10.5 17.2 10.5 27 24 44 24 44s13.5-17 13.5-26.8C37.5 9.8 31.5 4 24 4z"/><circle cx="24" cy="17.5" r="5.5" fill="#fff"/></svg>',
+  yt: '<svg class="ic" viewBox="0 0 48 48"><rect x="2" y="9" width="44" height="30" rx="10" fill="#FF0000"/><path fill="#fff" d="M20 16.5l12 7.5-12 7.5z"/></svg>',
+  web: '<svg class="ic" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" fill="#1a73e8"/><g fill="none" stroke="#fff" stroke-width="2.2"><circle cx="24" cy="24" r="12"/><ellipse cx="24" cy="24" rx="5.5" ry="12"/><path d="M12 24h24M14 17h20M14 31h20"/></g></svg>',
   chev: '<svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="#0b2a6b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   crown: '<svg viewBox="0 0 54 38"><path fill="#e0b84a" d="M4 12l10 9 13-17 13 17 10-9-4 22H8z"/><circle cx="4" cy="11" r="3" fill="#e0b84a"/><circle cx="27" cy="4" r="3" fill="#e0b84a"/><circle cx="50" cy="11" r="3" fill="#e0b84a"/><rect x="8" y="30" width="38" height="4" rx="2" fill="#c9971a"/></svg>',
   qrw: '<svg viewBox="0 0 30 30"><g fill="none" stroke="#fff" stroke-width="2.4"><rect x="3" y="3" width="9" height="9" rx="1"/><rect x="18" y="3" width="9" height="9" rx="1"/><rect x="3" y="18" width="9" height="9" rx="1"/></g><g fill="#fff"><rect x="18" y="18" width="4" height="4"/><rect x="24" y="18" width="3" height="3"/><rect x="18" y="24" width="3" height="3"/><rect x="24" y="24" width="3" height="3"/></g></svg>',
@@ -117,11 +119,12 @@ function qrSvg(text) {
   const { n, d } = qrMatrix(text), m = 2, t = n + 2 * m;
   return `<svg viewBox="0 0 ${t} ${t}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect width="${t}" height="${t}" fill="#fff"/>${d.map(([r, c]) => `<rect x="${c + m}" y="${r + m}" width="1" height="1"/>`).join('')}</svg>`;
 }
-function qrDownload(text, name) {
+function qrDownload(text, name, num) {
   const { n, d } = qrMatrix(text), m = 4, s = 12, t = (n + 2 * m) * s;
-  const cv = document.createElement('canvas'); cv.width = cv.height = t;
-  const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, t, t); x.fillStyle = '#000';
+  const cv = document.createElement('canvas'); cv.width = t; cv.height = t + 80;
+  const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, t, t + 80); x.fillStyle = '#000';
   d.forEach(([r, c]) => x.fillRect((c + m) * s, (r + m) * s, s, s));
+  x.font = 'bold 52px Arial'; x.textAlign = 'center'; x.fillText('No. ' + num, t / 2, t + 55);
   cv.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; a.click(); });
 }
 
@@ -163,7 +166,10 @@ async function publicPage(id) {
     ${row(IC.wa, 'WhatsApp', waUrl(s.whatsapp), '#25D366')}
     ${row(IC.ig, 'Instagram', safeUrl(s.instagram), '#d62976')}
     ${row(IC.fb, 'Facebook', safeUrl(s.facebook), '#1877F2')}
+    ${safeUrl(s.youtube) ? row(IC.yt, 'YouTube', safeUrl(s.youtube), '#FF0000') : ''}
+    ${safeUrl(s.website) ? row(IC.web, 'Website', safeUrl(s.website), '#1a73e8') : ''}
     <div class="qrf">${qrSvg(pubLink(id))}</div>
+    <div style="margin-top:6px;font-weight:700;color:#0b2a6b">No. ${id}</div>
     <div class="scan">${IC.scan}<span>Scan to open Website</span></div>
   </div>`);
   document.querySelectorAll('[data-nf]').forEach(el => el.onclick = e => { e.preventDefault(); toast('User not found — इस दुकान ने यह लिंक नहीं जोड़ा है'); });
@@ -255,12 +261,12 @@ async function adminCard(id) {
     <div class="row"><button id="tp" class="${s.published ? 'ghost' : ''}">${s.published ? 'Hide (unpublish)' : 'Make public'}</button><button class="red" id="dl">Delete</button></div></div>
     <div class="card"><h3>Public link (NFC chip / QR)</h3><input id="pl" readonly value="${esc(link)}">
     <div class="row"><button class="ghost" id="cp">Copy link</button><a class="btn ghost" href="${esc(link)}" target="_blank">Open page</a></div>
-    <div class="qrbox">${qrSvg(link)}</div>
+    <div class="qrbox">${qrSvg(link)}</div><div class="mut" style="text-align:center;font-weight:700">No. ${id}</div>
     <button class="full" id="qd">Download QR image</button></div>
     <div class="card"><h3>Change history</h3>${lg}</div>`, '<button class="ghost" onclick="logout()">Logout</button>');
   $('#bk').onclick = adminPage;
   $('#cp').onclick = () => { $('#pl').select(); navigator.clipboard && navigator.clipboard.writeText(link); msg('#em', 'Link copied.', 'ok'); };
-  $('#qd').onclick = () => qrDownload(link, 'card-' + id + '-qr.png');
+  $('#qd').onclick = () => qrDownload(link, 'card-' + id + '-qr.png', id);
   $('#save').onclick = async () => {
     const upd = {}; FIELDS.forEach(([k]) => upd[k] = $('#f_' + k).value.trim());
     const { error } = await sb.from('cards').update(upd).eq('id', id);
